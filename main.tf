@@ -1,10 +1,3 @@
-locals {
-  cluster_roles = toset(compact(concat(
-    [ for r in kubernetes_cluster_role.this : r.metadata[0].name ],
-    var.cluster_role_bindings
-  )))
-}
-
 resource "tls_private_key" "this" {
   algorithm = "RSA"
   rsa_bits  = var.rsa_bits
@@ -28,25 +21,17 @@ resource "kubernetes_certificate_signing_request_v1" "this" {
   }
 }
 
-resource "kubernetes_cluster_role" "this" {
-  provider = kubernetes
-  count    = length(var.cluster_role_rules) > 0 ? 1 : 0
-  metadata {
-    name = tls_cert_request.this.subject[0].common_name
-  }
-  dynamic "rule" {
-    for_each = { for i, v in var.cluster_role_rules : i => v }
-    content {
-      api_groups = rule.value["api_groups"]
-      resources  = rule.value["resources"]
-      verbs      = rule.value["verbs"]
-    }
-  }
+module "cluster_role" {
+  source = "ptonini/cluster-role/kubernetes"
+  version = "~> 1.0.0"
+  count  = length(var.cluster_role_rules) > 0 ? 1 : 0
+  name   = kubernetes_certificate_signing_request_v1.this.metadata[0].name
+  rules  = var.cluster_role_rules
 }
 
 resource "kubernetes_cluster_role_binding" "this" {
   provider = kubernetes
-  for_each = var.create_bindings ? local.cluster_roles : []
+  for_each = var.create_bindings ? toset(compact(concat([module.cluster_role[0].this.metadata[0].name], var.cluster_role_bindings))) : []
   metadata {
     name = tls_cert_request.this.subject[0].common_name
   }
