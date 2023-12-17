@@ -14,9 +14,11 @@ variable "rsa_bits" {
 
 variable "cluster_role_rules" {
   type = list(object({
-    api_groups = list(string)
-    resources  = list(string)
-    verbs      = list(string)
+    api_groups        = list(string)
+    resources         = list(string)
+    verbs             = list(string)
+    resource_names    = list(string)
+    non_resource_urls = list(string)
   }))
   default = []
 }
