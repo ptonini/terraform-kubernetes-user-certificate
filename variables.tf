@@ -12,30 +12,23 @@ variable "rsa_bits" {
   default = 4096
 }
 
-variable "cluster_role_rules" {
-  type = list(object({
-    api_groups        = list(string)
-    resources         = list(string)
-    verbs             = list(string)
-    resource_names    = list(string)
-    non_resource_urls = list(string)
+variable "cluster_roles" {
+  type = map(object({
+    name = optional(string)
+    rules = list(object({
+      api_groups        = list(string)
+      resources         = list(string)
+      verbs             = list(string)
+      resource_names    = list(string)
+      non_resource_urls = list(string)
+    }))
   }))
-  default = []
+  default  = {}
+  nullable = false
 }
 
 variable "cluster_role_bindings" {
-  type    = list(string)
-  default = []
-}
-
-variable "role_bindings" {
-  type = list(object({
-    name : string
-    namespace : string
-  }))
-  default = []
-}
-
-variable "create_bindings" {
-  default = true
+  type     = list(string)
+  default  = []
+  nullable = false
 }

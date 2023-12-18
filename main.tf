@@ -22,12 +22,32 @@ resource "kubernetes_certificate_signing_request_v1" "this" {
 }
 
 module "cluster_role" {
-  source  = "ptonini/cluster-role/kubernetes"
-  version = "~> 1.1.1"
-  count   = length(var.cluster_role_rules) > 0 ? 1 : 0
-  name    = kubernetes_certificate_signing_request_v1.this.metadata[0].name
-  rules   = var.cluster_role_rules
+  source   = "ptonini/cluster-role/kubernetes"
+  version  = "~> 1.1.0"
+  for_each = var.cluster_roles
+  name     = coalesce(each.value.name, each.key)
+  rules    = each.value.rules
   subject = {
+    kind = "User"
+    name = kubernetes_certificate_signing_request_v1.this.metadata[0].name
+
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "this" {
+  for_each = toset(var.cluster_role_bindings)
+
+  metadata {
+    name = "${kubernetes_certificate_signing_request_v1.this.metadata[0].name}-${index(var.cluster_role_bindings, each.key)}"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = each.value
+  }
+
+  subject {
     kind = "User"
     name = kubernetes_certificate_signing_request_v1.this.metadata[0].name
   }
